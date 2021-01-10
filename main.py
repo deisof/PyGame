@@ -22,7 +22,7 @@ pygame.display.set_caption('Galaxy Platformer')
 
 # определяем стиль текста
 font1 = pygame.font.SysFont('arial', 70)
-font2 = pygame.font.SysFont('arial', 50)
+font2 = pygame.font.SysFont('Bauhaus 93', 45)
 
 # определяем переменные, которые будем использовать в игре
 tile_size = 45
@@ -95,9 +95,9 @@ def reset_level(level):
         pickle_in = open(f'level{level}_data', 'rb')
         world_data = pickle.load(pickle_in)
     world = World(world_data)
-    # create dummy coin for showing the score
-    score_coin = Crystal(tile_size // 2, tile_size // 2)
-    crystal_group.add(score_coin)
+    # создание кристаллов
+    score_crystal = Crystal(tile_size // 2, tile_size // 2)
+    crystal_group.add(score_crystal)
     return world
 
 
@@ -484,7 +484,7 @@ while run:
             if pygame.sprite.spritecollide(player, crystal_group, True):
                 score += 1
                 coin_fx.play()
-            draw_text('X ' + str(score), font2, WHITE, tile_size - 10, 10)
+            draw_text(str(score), font2, WHITE, tile_size - 10, 10)
 
         blob_group.draw(screen)
         platform_group.draw(screen)
@@ -500,21 +500,24 @@ while run:
                 world_data = []
                 world = reset_level(level)
                 game_over = 0
-                score = 0
+                score = best_score
+                draw_text(str(best_score), font2, WHITE, tile_size - 10, 10)
         # если игрок прошёл уровень
         if game_over == 1:
             # заканчиваем уровень и переходим на следующий
             level += 1
             if level <= max_levels:
-                # reset level
+                # сброс уровня
+                best_score = score
                 world_data = []
                 world = reset_level(level)
                 game_over = 0
+                draw_text(str(best_score), font2, WHITE, tile_size - 10, 10)
             else:
                 draw_text('YOU WIN!', font1, PURPLE, (WIDTH // 2) - 140, HEIGHT // 2)
                 if restart_button.draw():
                     level = 1
-                    # reset level
+                    # сброс уровня
                     world_data = []
                     world = reset_level(level)
                     game_over = 0
