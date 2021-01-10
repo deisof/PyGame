@@ -1,7 +1,12 @@
 import pygame
 import sys
 import os
+import pickle
+from os import path
+from pygame import mixer
 
+pygame.mixer.pre_init(44100, -16, 2, 512)
+mixer.init()
 pygame.init()
 
 clock = pygame.time.Clock()
@@ -16,6 +21,9 @@ pygame.display.set_caption('Galaxy Platformer')
 # определяем переменные, которые будем использовать в игре
 tile_size = 45
 game_over = 0
+main_menu = True
+level = 1
+max_levels = 4
 
 
 def load_image(name, colorkey=None):
@@ -38,6 +46,34 @@ def load_image(name, colorkey=None):
 # загружаем изображения
 bg_img = load_image('6bg.jpg')
 bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
+restart_img = load_image('restart_btn.png')
+start_img = load_image('start.png')
+exit_img = load_image('exit_btn.png')
+
+# загружаем музыку
+pygame.mixer.music.load('data/game.mp3')
+pygame.mixer.music.play(-1, 0.0, 5000)
+coin_fx = pygame.mixer.Sound('data/coin.wav')
+coin_fx.set_volume(0.5)
+jump_fx = pygame.mixer.Sound('data/jump.wav')
+jump_fx.set_volume(0.5)
+game_over_fx = pygame.mixer.Sound('data/game_over.wav')
+game_over_fx.set_volume(0.5)
+
+
+# функция для сброса уровня
+def reset_level(level):
+    player.reset(100, HEIGHT - 130)
+    blob_group.empty()
+    spikes_group.empty()
+    exit_group.empty()
+
+    # load in level data and create world
+    if path.exists(f'level{level}_data'):
+        pickle_in = open(f'level{level}_data', 'rb')
+        world_data = pickle.load(pickle_in)
+    world = World(world_data)
+    return world
 
 
 class Player:
@@ -113,6 +149,9 @@ class Player:
             # проверка на столкновение с шипами
             if pygame.sprite.spritecollide(self, spikes_group, False):
                 game_over = -1
+            # проверка на столкновение с порталом (выход)
+            if pygame.sprite.spritecollide(self, exit_group, False):
+                game_over = 1
             # обновление координат игрока
             self.rect.x += dx
             self.rect.y += dy
@@ -133,12 +172,12 @@ class Player:
         self.index = 0
         self.counter = 0
         for num in range(1, 5):
-            img_right = pygame.image.load(f'img/guy{num}.png')
+            img_right = load_image(f'guy{num}.png')
             img_right = pygame.transform.scale(img_right, (40, 80))
             img_left = pygame.transform.flip(img_right, True, False)
             self.images_right.append(img_right)
             self.images_left.append(img_left)
-        self.dead_image = pygame.image.load('img/ghost.png')
+        self.dead_image = load_image('ghost.png')
         self.image = self.images_right[self.index]
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -183,13 +222,16 @@ class World:
                 if tile == 6:
                     lava = Spikes_1(col_count * tile_size, row_count * tile_size + (tile_size // 2))
                     spikes_group.add(lava)
-                if tile == 7:
+                if tile == 8:
+                    exit = Exit(col_count * tile_size, row_count * tile_size - (tile_size // 2))
+                    exit_group.add(exit)
+                if tile == 9:
                     enemystop = EnemyStop(col_count * tile_size, row_count * tile_size - (tile_size // 2))
                     blob_group.add(enemystop)
-                if tile == 8:
+                if tile == 10:
                     enemyfast = EnemyFast(col_count * tile_size, row_count * tile_size + 15)
                     blob_group.add(enemyfast)
-                if tile == 9:
+                if tile == 11:
                     spikectop = Spikes(col_count * tile_size, row_count * tile_size + (tile_size // 35))
                     spikes_group.add(spikectop)
                 col_count += 1
@@ -292,35 +334,32 @@ class Button:
         return event
 
 
-world_data = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1],
-    [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 2, 2, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1],
-    [1, 7, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1],
-    [1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 2, 0, 0, 4, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 2, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 2, 2, 2, 1],
-    [1, 0, 0, 0, 0, 0, 2, 2, 2, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-]
+class Exit(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        img = load_image('exit.png')
+        self.image = pygame.transform.scale(img, (tile_size, int(tile_size * 2)))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
 
 player = Player(100, HEIGHT - 130)
 
 blob_group = pygame.sprite.Group()
 spikes_group = pygame.sprite.Group()
+exit_group = pygame.sprite.Group()
 
+# загрузка уровней
+if path.exists(f'level{level}_data'):
+    pickle_in = open(f'level{level}_data', 'rb')
+    world_data = pickle.load(pickle_in)
 world = World(world_data)
+
+# создание кнопок
+restart_button = Button(WIDTH // 2 - 50, HEIGHT // 2 + 100, restart_img)
+start_button = Button(WIDTH // 2 - 350, HEIGHT // 2, start_img)
+exit_button = Button(WIDTH // 2 + 150, HEIGHT // 2, exit_img)
 
 run = True
 while run:
@@ -329,15 +368,46 @@ while run:
 
     screen.blit(bg_img, (0, 0))
 
-    world.draw()
+    if main_menu == True:
+        if exit_button.draw():
+            run = False
+        if start_button.draw():
+            main_menu = False
+    else:
+        world.draw()
 
-    if game_over == 0:
-        blob_group.update()
+        if game_over == 0:
+            blob_group.update()
 
-    blob_group.draw(screen)
-    spikes_group.draw(screen)
+        blob_group.draw(screen)
+        spikes_group.draw(screen)
+        exit_group.draw(screen)
 
-    game_over = player.update(game_over)
+        game_over = player.update(game_over)
+
+        # если игрок умер
+        if game_over == -1:
+            if restart_button.draw():
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+
+        # если игрок хавершил уровень
+        if game_over == 1:
+            # сброс уровня и переход на следующий
+            level += 1
+            if level <= max_levels:
+                # сброс уровня
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+            else:
+                if restart_button.draw():
+                    level = 1
+                    # сброс уровня
+                    world_data = []
+                    world = reset_level(level)
+                    game_over = 0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
