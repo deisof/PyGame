@@ -28,8 +28,8 @@ font2 = pygame.font.SysFont('Bauhaus 93', 45)
 tile_size = 45
 game_over = 0
 main_menu = True
-level = 1
-max_levels = 4
+level = 5
+max_levels = 5
 score = 0
 best_score = score
 
@@ -67,8 +67,8 @@ restart_img = pygame.transform.scale(restart_img, (300, 300))
 # загружаем музыку
 pygame.mixer.music.load('data/game.mp3')
 pygame.mixer.music.play(-1, 0.0, 5000)
-coin_fx = pygame.mixer.Sound('data/coin.wav')
-coin_fx.set_volume(0.5)
+crystal_fx = pygame.mixer.Sound('data/crystal.wav')
+crystal_fx.set_volume(0.5)
 jump_fx = pygame.mixer.Sound('data/jump.wav')
 jump_fx.set_volume(0.5)
 game_over_fx = pygame.mixer.Sound('data/game_over.wav')
@@ -84,15 +84,15 @@ def draw_text(text, font, text_col, x, y):
 # функция для того, чтобы сбросить уровень
 def reset_level(level):
     player.reset(100, HEIGHT - 130)
-    blob_group.empty()
+    enemy_group.empty()
     platform_group.empty()
     crystal_group.empty()
     spikes_group.empty()
     exit_group.empty()
 
     # загрузка уровня
-    if path.exists(f'level{level}_data'):
-        pickle_in = open(f'level{level}_data', 'rb')
+    if path.exists(f'data/level{level}_data'):
+        pickle_in = open(f'data/level{level}_data', 'rb')
         world_data = pickle.load(pickle_in)
     world = World(world_data)
     # создание кристаллов
@@ -145,8 +145,10 @@ class Player:
                 jump_fx.play()
                 self.vel_y = -15
                 self.jumped = True
+
             if key[pygame.K_SPACE] == False and key[pygame.K_w] == False:
                 self.jumped = False
+
             # перемещение влево
             if key[pygame.K_LEFT] or key[pygame.K_a]:
                 dx -= 5
@@ -201,7 +203,7 @@ class Player:
                         self.in_air = False
 
             # проверка на столкновение с врагами
-            if pygame.sprite.spritecollide(self, blob_group, False):
+            if pygame.sprite.spritecollide(self, enemy_group, False):
                 game_over = -1
                 game_over_fx.play()
 
@@ -250,9 +252,10 @@ class Player:
     def reset(self, x, y):
         self.images_right = []
         self.images_left = []
+        self.jump = []
         self.index = 0
         self.counter = 0
-        for num in range(1, 5):
+        for num in range(1, 7):
             img_right = load_image(f'guy{num}.png')
             img_right = pygame.transform.scale(img_right, (40, 80))
             img_left = pygame.transform.flip(img_right, True, False)
@@ -299,7 +302,7 @@ class World:
                     self.tile_list.append(tile)
                 if tile == 3:
                     blob = Enemy(col_count * tile_size, row_count * tile_size + 15)
-                    blob_group.add(blob)
+                    enemy_group.add(blob)
                 if tile == 4:
                     platform = Platform(col_count * tile_size, row_count * tile_size, 1, 0)
                     platform_group.add(platform)
@@ -317,10 +320,10 @@ class World:
                     exit_group.add(exit)
                 if tile == 9:
                     enemystop = EnemyStop(col_count * tile_size, row_count * tile_size - (tile_size // 2))
-                    blob_group.add(enemystop)
+                    enemy_group.add(enemystop)
                 if tile == 10:
                     enemyfast = EnemyFast(col_count * tile_size, row_count * tile_size + 15)
-                    blob_group.add(enemyfast)
+                    enemy_group.add(enemyfast)
                 if tile == 11:
                     spikectop = Spikes(col_count * tile_size, row_count * tile_size + (tile_size // 35))
                     spikes_group.add(spikectop)
@@ -337,6 +340,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = load_image('snailWalk1.png')
+        self.image = pygame.transform.flip(self.image, True, False)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -349,12 +353,14 @@ class Enemy(pygame.sprite.Sprite):
         if abs(self.move_counter) > 60:
             self.move_direction *= -1
             self.move_counter *= -1
+            self.image = pygame.transform.flip(self.image, True, False)
 
 
 class EnemyFast(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = load_image('slimeWalk1.png')
+        self.image = pygame.transform.flip(self.image, True, False)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -367,6 +373,7 @@ class EnemyFast(pygame.sprite.Sprite):
         if abs(self.move_counter) > 60:
             self.move_direction *= -1
             self.move_counter *= -1
+            self.image = pygame.transform.flip(self.image, True, False)
 
 
 class Platform(pygame.sprite.Sprite):
@@ -442,7 +449,7 @@ class Exit(pygame.sprite.Sprite):
 
 player = Player(100, HEIGHT - 130)
 
-blob_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 platform_group = pygame.sprite.Group()
 spikes_group = pygame.sprite.Group()
 crystal_group = pygame.sprite.Group()
@@ -453,8 +460,8 @@ score_crystal = Crystal(tile_size // 2, tile_size // 2)
 crystal_group.add(score_crystal)
 
 # загрузка карт уровня
-if path.exists(f'level{level}_data'):
-    pickle_in = open(f'level{level}_data', 'rb')
+if path.exists(f'data/level{level}_data'):
+    pickle_in = open(f'data/level{level}_data', 'rb')
     world_data = pickle.load(pickle_in)
 world = World(world_data)
 
@@ -477,16 +484,16 @@ while run:
     else:
         world.draw()
         if game_over == 0:
-            blob_group.update()
+            enemy_group.update()
             platform_group.update()
             # обновление score
             # проверка был ли собран кристалл
             if pygame.sprite.spritecollide(player, crystal_group, True):
                 score += 1
-                coin_fx.play()
+                crystal_fx.play()
             draw_text(str(score), font2, WHITE, tile_size - 10, 10)
 
-        blob_group.draw(screen)
+        enemy_group.draw(screen)
         platform_group.draw(screen)
         spikes_group.draw(screen)
         crystal_group.draw(screen)
