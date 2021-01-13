@@ -71,7 +71,7 @@ restart_img = pygame.transform.scale(restart_img, (300, 300))
 
 # загружаем музыку
 pygame.mixer.music.load('data/game.mp3')
-pygame.mixer.music.play(-1, 0.0, 5000)
+pygame.mixer.music.play(-1, 5, 5000)
 coin_fx = pygame.mixer.Sound('data/crystal.wav')
 coin_fx.set_volume(0.5)
 jump_fx = pygame.mixer.Sound('data/jump.wav')
