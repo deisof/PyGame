@@ -96,8 +96,8 @@ def reset_level(level):
     exit_group.empty()
 
     # загрузка уровня
-    if path.exists(f'level{level}_data'):
-        pickle_in = open(f'level{level}_data', 'rb')
+    if path.exists(f'data/level{level}_data'):
+        pickle_in = open(f'data/level{level}_data', 'rb')
         world_data = pickle.load(pickle_in)
     world = World(world_data)
     # создание кристаллов
@@ -342,6 +342,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = load_image('snailWalk1.png')
+        self.image = pygame.transform.flip(self.image, True, False)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -352,6 +353,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x += self.move_direction
         self.move_counter += 1
         if abs(self.move_counter) > 60:
+            self.image = pygame.transform.flip(self.image, True, False)
             self.move_direction *= -1
             self.move_counter *= -1
 
@@ -360,6 +362,7 @@ class EnemyFast(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = load_image('slimeWalk1.png')
+        self.image = pygame.transform.flip(self.image, True, False)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -370,6 +373,7 @@ class EnemyFast(pygame.sprite.Sprite):
         self.rect.x += self.move_direction
         self.move_counter += 1
         if abs(self.move_counter) > 60:
+            self.image = pygame.transform.flip(self.image, True, False)
             self.move_direction *= -1
             self.move_counter *= -1
 
