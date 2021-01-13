@@ -29,8 +29,8 @@ font2 = pygame.font.SysFont('Bauhaus 93', 45)
 tile_size = 45
 game_over = 0
 main_menu = True
-level = 2
-max_levels = 2
+level = 1
+max_levels = 5
 score = 0
 best_score = score
 
@@ -72,7 +72,7 @@ restart_img = pygame.transform.scale(restart_img, (300, 300))
 # загружаем музыку
 pygame.mixer.music.load('data/game.mp3')
 pygame.mixer.music.play(-1, 0.0, 5000)
-coin_fx = pygame.mixer.Sound('data/coin.wav')
+coin_fx = pygame.mixer.Sound('data/crystal.wav')
 coin_fx.set_volume(0.5)
 jump_fx = pygame.mixer.Sound('data/jump.wav')
 jump_fx.set_volume(0.5)
