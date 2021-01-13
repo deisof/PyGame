@@ -4,6 +4,7 @@ import sys
 import os
 import pickle
 from os import path
+import random
 
 pygame.mixer.pre_init(44100, -16, 2, 512)
 mixer.init()
@@ -28,14 +29,18 @@ font2 = pygame.font.SysFont('Bauhaus 93', 45)
 tile_size = 45
 game_over = 0
 main_menu = True
-level = 5
-max_levels = 5
+level = 2
+max_levels = 2
 score = 0
 best_score = score
 
 # определяем цвета
 WHITE = (255, 255, 255)
 PURPLE = (195, 5, 248)
+
+# для звёздочек
+GRAVITY = 0
+screen_rect = (0, 0, WIDTH, HEIGHT)
 
 
 def load_image(name, colorkey=None):
@@ -67,8 +72,8 @@ restart_img = pygame.transform.scale(restart_img, (300, 300))
 # загружаем музыку
 pygame.mixer.music.load('data/game.mp3')
 pygame.mixer.music.play(-1, 0.0, 5000)
-crystal_fx = pygame.mixer.Sound('data/crystal.wav')
-crystal_fx.set_volume(0.5)
+coin_fx = pygame.mixer.Sound('data/coin.wav')
+coin_fx.set_volume(0.5)
 jump_fx = pygame.mixer.Sound('data/jump.wav')
 jump_fx.set_volume(0.5)
 game_over_fx = pygame.mixer.Sound('data/game_over.wav')
@@ -84,15 +89,15 @@ def draw_text(text, font, text_col, x, y):
 # функция для того, чтобы сбросить уровень
 def reset_level(level):
     player.reset(100, HEIGHT - 130)
-    enemy_group.empty()
+    blob_group.empty()
     platform_group.empty()
     crystal_group.empty()
     spikes_group.empty()
     exit_group.empty()
 
     # загрузка уровня
-    if path.exists(f'data/level{level}_data'):
-        pickle_in = open(f'data/level{level}_data', 'rb')
+    if path.exists(f'level{level}_data'):
+        pickle_in = open(f'level{level}_data', 'rb')
         world_data = pickle.load(pickle_in)
     world = World(world_data)
     # создание кристаллов
@@ -145,10 +150,8 @@ class Player:
                 jump_fx.play()
                 self.vel_y = -15
                 self.jumped = True
-
             if key[pygame.K_SPACE] == False and key[pygame.K_w] == False:
                 self.jumped = False
-
             # перемещение влево
             if key[pygame.K_LEFT] or key[pygame.K_a]:
                 dx -= 5
@@ -203,7 +206,7 @@ class Player:
                         self.in_air = False
 
             # проверка на столкновение с врагами
-            if pygame.sprite.spritecollide(self, enemy_group, False):
+            if pygame.sprite.spritecollide(self, blob_group, False):
                 game_over = -1
                 game_over_fx.play()
 
@@ -252,10 +255,9 @@ class Player:
     def reset(self, x, y):
         self.images_right = []
         self.images_left = []
-        self.jump = []
         self.index = 0
         self.counter = 0
-        for num in range(1, 7):
+        for num in range(1, 5):
             img_right = load_image(f'guy{num}.png')
             img_right = pygame.transform.scale(img_right, (40, 80))
             img_left = pygame.transform.flip(img_right, True, False)
@@ -302,7 +304,7 @@ class World:
                     self.tile_list.append(tile)
                 if tile == 3:
                     blob = Enemy(col_count * tile_size, row_count * tile_size + 15)
-                    enemy_group.add(blob)
+                    blob_group.add(blob)
                 if tile == 4:
                     platform = Platform(col_count * tile_size, row_count * tile_size, 1, 0)
                     platform_group.add(platform)
@@ -320,10 +322,10 @@ class World:
                     exit_group.add(exit)
                 if tile == 9:
                     enemystop = EnemyStop(col_count * tile_size, row_count * tile_size - (tile_size // 2))
-                    enemy_group.add(enemystop)
+                    blob_group.add(enemystop)
                 if tile == 10:
                     enemyfast = EnemyFast(col_count * tile_size, row_count * tile_size + 15)
-                    enemy_group.add(enemyfast)
+                    blob_group.add(enemyfast)
                 if tile == 11:
                     spikectop = Spikes(col_count * tile_size, row_count * tile_size + (tile_size // 35))
                     spikes_group.add(spikectop)
@@ -340,7 +342,6 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = load_image('snailWalk1.png')
-        self.image = pygame.transform.flip(self.image, True, False)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -353,14 +354,12 @@ class Enemy(pygame.sprite.Sprite):
         if abs(self.move_counter) > 60:
             self.move_direction *= -1
             self.move_counter *= -1
-            self.image = pygame.transform.flip(self.image, True, False)
 
 
 class EnemyFast(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = load_image('slimeWalk1.png')
-        self.image = pygame.transform.flip(self.image, True, False)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -373,7 +372,6 @@ class EnemyFast(pygame.sprite.Sprite):
         if abs(self.move_counter) > 60:
             self.move_direction *= -1
             self.move_counter *= -1
-            self.image = pygame.transform.flip(self.image, True, False)
 
 
 class Platform(pygame.sprite.Sprite):
@@ -447,9 +445,51 @@ class Exit(pygame.sprite.Sprite):
         self.rect.y = y
 
 
+class Particle(pygame.sprite.Sprite):
+    # сгенерируем частицы разного размера
+    fire = [load_image("star.png")]
+    for scale in (5, 10, 20):
+        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites)
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+
+        # у каждой частицы своя скорость — это вектор
+        self.velocity = [dx, dy]
+        # и свои координаты
+        self.rect.x, self.rect.y = pos
+
+        # гравитация будет одинаковой (значение константы)
+        self.gravity = GRAVITY
+
+    def update(self):
+        # применяем гравитационный эффект:
+        # движение с ускорением под действием гравитации
+        self.velocity[1] += self.gravity
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # убиваем, если частица ушла за экран
+        if not self.rect.colliderect(screen_rect):
+            self.kill()
+
+
+def create_particles(position):
+    # количество создаваемых частиц
+    particle_count = 20
+    # возможные скорости
+    numbers = range(-5, 6)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
+
+
+all_sprites = pygame.sprite.Group()
+
 player = Player(100, HEIGHT - 130)
 
-enemy_group = pygame.sprite.Group()
+blob_group = pygame.sprite.Group()
 platform_group = pygame.sprite.Group()
 spikes_group = pygame.sprite.Group()
 crystal_group = pygame.sprite.Group()
@@ -484,16 +524,16 @@ while run:
     else:
         world.draw()
         if game_over == 0:
-            enemy_group.update()
+            blob_group.update()
             platform_group.update()
             # обновление score
             # проверка был ли собран кристалл
             if pygame.sprite.spritecollide(player, crystal_group, True):
                 score += 1
-                crystal_fx.play()
+                coin_fx.play()
             draw_text(str(score), font2, WHITE, tile_size - 10, 10)
 
-        enemy_group.draw(screen)
+        blob_group.draw(screen)
         platform_group.draw(screen)
         spikes_group.draw(screen)
         crystal_group.draw(screen)
@@ -529,6 +569,10 @@ while run:
                     world = reset_level(level)
                     game_over = 0
                     score = 0
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    create_particles(pygame.mouse.get_pos())
+                all_sprites.update()
+                all_sprites.draw(screen)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
